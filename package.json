@@ -14,6 +14,7 @@
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/src/main",
+    "vercel-build": "npx prisma migrate deploy && npm run build",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
     "prisma:generate": "npx prisma generate",
     "vercel-build": "npx prisma migrate deploy && npm install && npm run build",
