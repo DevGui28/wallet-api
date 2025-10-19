@@ -1,0 +1,213 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum PaymentMethod {
+  CREDIT_CARD
+  DEBIT_CARD
+  CASH
+  BANK_SLIP
+  BANK_TRANSFER
+  PIX
+  INVOICE
+  OTHER
+}
+
+enum Plan {
+  FREE
+  BASIC
+  PREMIUM
+}
+
+enum TransactionType {
+  INCOME
+  EXPENSE
+  INVESTMENT
+}
+
+enum RecurrenceInterval {
+  MONTHLY
+  YEARLY
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+}
+
+enum CategoryType {
+  INCOME
+  INVESTMENT
+  EXPENSE
+}
+
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  password  String
+  plan      Plan     @default(FREE)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  creditCards    CreditCard[]
+  transactions   Transaction[]
+  userPlan       UserPlan[]
+  invoices       Invoice[]
+  goals          Goal[]
+  recurringBills RecurringBill[]
+  budgets        Budget[]
+
+  @@map("users")
+}
+
+model Transaction {
+  id                String          @id @default(uuid())
+  userId            String          @map("user_id")
+  categoryId        String          @map("category_id")
+  name              String
+  type              TransactionType @map("type")
+  description       String?
+  paymentMethod     PaymentMethod   @map("payment_method")
+  date              DateTime        @map("date")
+  totalAmount       Decimal         @db.Money
+  isPaid            Boolean         @default(false) @map("is_paid")
+  isRecurring       Boolean         @default(false) @map("is_recurring")
+  creditCardId      String?         @map("credit_card_id")
+  invoiceId         String?         @map("invoice_id")
+  purchaseId        String?         @map("purchase_id")
+  totalInstallments Int?            @map("total_installments")
+  installmentNumber Int?            @map("installment_number")
+  createdAt         DateTime        @default(now()) @map("created_at")
+  updatedAt         DateTime        @updatedAt @map("updated_at")
+  recurringBillId   String?
+  goalId            String?
+
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category      Category       @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  creditCard    CreditCard?    @relation(fields: [creditCardId], references: [id], onDelete: SetNull)
+  invoice       Invoice?       @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  recurringBill RecurringBill? @relation(fields: [recurringBillId], references: [id], onDelete: SetNull)
+  goal          Goal?          @relation(fields: [goalId], references: [id], onDelete: SetNull)
+
+  @@index([userId, date], name: "idx_user_date")
+  @@map("transactions")
+}
+
+model CreditCard {
+  id         String   @id @default(uuid())
+  userId     String   @map("user_id")
+  cardName   String   @map("card_name")
+  lastDigits Int?     @map("last_digits")
+  limit      Decimal? @db.Money
+  closingDay Int      @map("closing_day")
+  dueDay     Int      @map("due_day")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transaction Transaction[]
+  invoice     Invoice[]
+
+  @@map("credit_cards")
+}
+
+model UserPlan {
+  id        String    @id @default(uuid())
+  userId    String    @map("user_id")
+  plan      Plan
+  startDate DateTime  @map("start_date")
+  endDate   DateTime? @map("end_date")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_plans")
+}
+
+model Category {
+  id        String       @id @default(uuid())
+  name      String
+  type      CategoryType
+  createdAt DateTime     @default(now()) @map("created_at")
+
+  transactions Transaction[]
+  budget       Budget[]
+
+  @@map("categories")
+}
+
+model Invoice {
+  id           String    @id @default(uuid())
+  userId       String    @map("user_id")
+  creditCardId String    @map("credit_card_id")
+  month        Int
+  year         Int
+  totalAmount  Decimal   @map("total_amount") @db.Money
+  isPaid       Boolean   @default(false) @map("is_paid")
+  paidAt       DateTime? @map("paid_at")
+  dueDate      DateTime  @map("due_date")
+  closingDate  DateTime  @map("closing_date")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  creditCard   CreditCard    @relation(fields: [creditCardId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+
+  @@unique([creditCardId, month, year])
+  @@map("invoices")
+}
+
+model Budget {
+  id         String   @id @default(uuid())
+  userId     String   @map("user_id")
+  categoryId String   @map("category_id")
+  limit      Decimal  @db.Money
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, categoryId])
+  @@map("budgets")
+}
+
+model RecurringBill {
+  id            String   @id @default(uuid())
+  userId        String   @map("user_id")
+  name          String
+  description   String?
+  amount        Decimal  @db.Money
+  recurrenceDay Int      @map("recurrence_day")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+
+  @@map("recurring_bills")
+}
+
+model Goal {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  name        String
+  description String?
+  targetValue Decimal  @map("target_value") @db.Money
+  savedValue  Decimal  @default(0) @map("saved_value") @db.Money
+  deadline    DateTime @map("deadline")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+
+  @@map("goals")
+}
