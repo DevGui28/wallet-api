@@ -21,6 +21,8 @@ export class AuthService {
   async login({ email, password }: LoginDto) {
     const user = await this.userRepository.findWithPassword(email)
 
+    console.log(user)
+
     if (!user) {
       throw new NotFoundException(errors.USER_NOT_FOUND)
     }
