@@ -32,6 +32,23 @@ export class PrismaUserRepository implements UserRepository {
     return result
   }
 
+  async findByEmail(email: string): Promise<Omit<User, 'password'>> {
+    const result = await this.prisma.user.findFirst({
+      where: {
+        email,
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        createdAt: true,
+        plan: true,
+      },
+    });
+
+    return result;
+  }
+
   async find(data: Partial<User>): Promise<Omit<User, 'password'>> {
     const result = await this.prisma.user.findFirst({
       where: data,

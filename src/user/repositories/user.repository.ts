@@ -6,6 +6,8 @@ export abstract class UserRepository {
 
   abstract findWithPassword(email: string): Promise<User>
 
+  abstract findByEmail(email: string): Promise<Omit<User, 'password'> | null>
+
   abstract find(data: Partial<User>): Promise<Omit<User, 'password'>>
 
   abstract findMany(data: Partial<User>): Promise<Omit<User, 'password'>[]>
